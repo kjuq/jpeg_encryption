@@ -219,27 +219,32 @@ if __name__ == '__main__':
             img_row.append(crop_img)
         img_array.append(img_row)
 
+    # scramble
     if args.scramble and args.type == 'encrypt':
         img_array = scramble_img(img_array)
-    elif args.scramble and args.type == 'decrypt':
-        img_array = unscramble_img(img_array)
 
-    for y in range(0, height, b_y):
-        img_reselt_row = None
-        for x in range(0, width, b_x):
-            img = img_array[int(y/16)][int(x/16)]
-
+    # (un)rotate and (un)invert
+    for y, img_row in enumerate(img_array):
+        for x, img in enumerate(img_row):
             if args.type == 'encrypt':
                 if args.rotate:
-                    img = rotate_img(img)
+                    img_array[y][x] = rotate_img(img)
                 if args.invert:
-                    img = invert_img(img)
+                    img_array[y][x] = invert_img(img)
             elif args.type == 'decrypt':
                 if args.rotate:
-                    img = unrotate_img(img)
+                    img_array[y][x] = unrotate_img(img)
                 if args.invert:
-                    img = uninvert_img(img)
+                    img_array[y][x] = uninvert_img(img)
 
+    # unscramble
+    if args.scramble and args.type == 'decrypt':
+        img_array = unscramble_img(img_array)
+
+    # reconstructe image
+    for y, img_row in enumerate(img_array):
+        img_reselt_row = None
+        for x, img in enumerate(img_row):
             if x == 0:
                 img_reselt_row = img
             else:
