@@ -262,7 +262,6 @@ if __name__ == '__main__':  # noqa: W391
         if y == 0:
             img_reselt = img_reselt_row
         else:
-            cv2.imshow('', img_reselt)
             img_reselt = cv2.vconcat([img_reselt, img_reselt_row])
 
     cv2.imwrite(args.output, img_reselt)
