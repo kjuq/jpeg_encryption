@@ -1,5 +1,6 @@
 import cv2
 import argparse
+import random
 
 # {{{ SEEDS
 rotation_seed = \
@@ -38,32 +39,55 @@ invert_seed = \
     '0110212110122110'\
     '0220010100100112'\
 
-scramble_seed = \
-    '033099223071015082059137037192139044232189014103'\
-    '190227105035066185224080056095072086203236062151'\
-    '067114230197209084081073175202079093115052061091'\
-    '110002255094133048005125222145161000176020141097'\
-    '191243109205214183239140199122200162237228083143'\
-    '211053210134226194104154024136012242054129113032'\
-    '152246058158179213117147064245193102169173221050'\
-    '156009180057100101178092107108244034146198074040'\
-    '027212049065184220026030111204047031164075155132'\
-    '112043120208186215247087126089098144163229160076'\
-    '039207045166070106010250078174195028234006188055'\
-    '248187041127150019013042096168121181036085253018'\
-    '130235217135116051167219068249231077251218142069'\
-    '011148131022172153017119138170016063124128003216'\
-    '254182046252038118157123159165088238201007004060'\
-    '090196025021177171008149206240241233023001029225'
+scramble_pre_seed = '1234'
+
+
+#   '033099223071015082059137037192139044232189014103'\
+#   '190227105035066185224080056095072086203236062151'\
+#   '067114230197209084081073175202079093115052061091'\
+#   '110002255094133048005125222145161000176020141097'\
+#   '191243109205214183239140199122200162237228083143'\
+#   '211053210134226194104154024136012242054129113032'\
+#   '152246058158179213117147064245193102169173221050'\
+#   '156009180057100101178092107108244034146198074040'\
+#   '027212049065184220026030111204047031164075155132'\
+#   '112043120208186215247087126089098144163229160076'\
+#   '039207045166070106010250078174195028234006188055'\
+#   '248187041127150019013042096168121181036085253018'\
+#   '130235217135116051167219068249231077251218142069'\
+#   '011148131022172153017119138170016063124128003216'\
+#   '254182046252038118157123159165088238201007004060'\
+#   '090196025021177171008149206240241233023001029225'
+
 # }}}
 
 rotation_seed_index = 0
 invert_seed_index = 0
 
-b_x = 16
-b_y = 16
-width = 256
-height = 256
+b_x = 120
+b_y = 120
+width = 1920
+height = 1080
+
+assert width % b_x == 0
+assert height % b_y == 0
+
+h_block_num = int(width / b_x)
+v_block_num = int(height / b_y)
+
+block_num = h_block_num * v_block_num
+digit = len(str(block_num))
+
+
+def generate_scramble_seed(pre_seed):
+    random.seed(pre_seed)
+
+    perm = [str(i).zfill(digit) for i in range(block_num)]
+    random.shuffle(perm)
+
+    scramble_seed = ''.join(perm)
+
+    return scramble_seed
 
 
 def rotate_img(img):
@@ -122,8 +146,8 @@ def scramble_img(img_array):
         shuffled_array.append(expanded_array[idx])
 
     reconstructed_arr = []
-    for x in range(0, width, b_x):
-        reconstructed_arr.append(shuffled_array[x:x+b_x])
+    for x in range(0, block_num, h_block_num):
+        reconstructed_arr.append(shuffled_array[x:x + h_block_num])
     return reconstructed_arr
 
 
@@ -134,16 +158,16 @@ def unscramble_img(img_array):
             expanded_array.append(img)
     unshuffled_arr = unshuffle_array(expanded_array, scramble_seed)
     reconstructed_arr = []
-    for x in range(0, width, b_x):
-        reconstructed_arr.append(unshuffled_arr[x:x+b_x])
+    for x in range(0, block_num, h_block_num):
+        reconstructed_arr.append(unshuffled_arr[x:x + h_block_num])
     return reconstructed_arr
 
 
 def scramble_seed_to_idx_lst(scramble_seed):
     index_lst = []
     for i in range(int(width / b_x) * int(height / b_y)):
-        left = i * 3
-        right = (i + 1) * 3
+        left = i * digit
+        right = (i + 1) * digit
         index = int(scramble_seed[left:right])
         index_lst.append(index)
     return index_lst
@@ -152,8 +176,8 @@ def scramble_seed_to_idx_lst(scramble_seed):
 def seed_to_index_lst(scramble_seed):
     index_lst = []
     for i in range(int(width / b_x) * int(height / b_y)):
-        left = i * 3
-        right = (i + 1) * 3
+        left = i * digit
+        right = (i + 1) * digit
         index = int(scramble_seed[left:right])
         index_lst.append(index)
     return index_lst
@@ -167,59 +191,63 @@ def unshuffle_array(array, seed):
     return [a for (a, b) in zipped_lst]
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # noqa: W391
     # parse arguments
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-            '--type',
-            choices=['encrypt', 'decrypt'],
-            help='specify what you\'d like to do',
-            required=True
-            )
+        '--type',
+        choices=['encrypt', 'decrypt'],
+        help='specify what you\'d like to do',
+        required=True
+    )
     parser.add_argument(
-            '--invert',
-            help='encrypt/decrypt a picture by inverting',
-            action='store_true'
-            )
+        '--invert',
+        help='encrypt/decrypt a picture by inverting',
+        action='store_true'
+    )
     parser.add_argument(
-            '--scramble',
-            help='encrypt/decrypt a picture by scrambling',
-            action='store_true'
-            )
+        '--scramble',
+        help='encrypt/decrypt a picture by scrambling',
+        action='store_true'
+    )
     parser.add_argument(
-            '--rotate',
-            help='encrypt/decrypt a picture by rotating',
-            action='store_true'
-            )
+        '--rotate',
+        help='encrypt/decrypt a picture by rotating',
+        action='store_true'
+    )
     parser.add_argument(
-            '-i',
-            '--input',
-            help='specify a file to encrypt/decrypt',
-            metavar='PATH_TO_INPUT'
-            )
+        '-i',
+        '--input',
+        help='specify a file to encrypt/decrypt',
+        metavar='PATH_TO_INPUT'
+    )
     parser.add_argument(
-            '-o',
-            '--output',
-            help='specify a destination path to output',
-            metavar='PATH_TO_OUTPUT'
-            )
+        '-o',
+        '--output',
+        help='specify a destination path to output',
+        metavar='PATH_TO_OUTPUT'
+    )
 
     args = parser.parse_args()
 
     img_reselt = None
     img = cv2.imread(args.input)
 
+    assert img is not None, 'Failed to load the image'
+
     # separation
     img_array = []
     for y in range(0, height, b_y):
         img_row = []
         for x in range(0, width, b_x):
-            crop_img = img[y:y+b_y, x:x+b_x]
+            crop_img = img[y:y + b_y, x:x + b_x]
             img_row.append(crop_img)
         img_array.append(img_row)
 
     # scramble
+    scramble_seed = generate_scramble_seed(scramble_pre_seed)
+
     if args.scramble and args.type == 'encrypt':
         img_array = scramble_img(img_array)
 
@@ -252,16 +280,10 @@ if __name__ == '__main__':
         if y == 0:
             img_reselt = img_reselt_row
         else:
+            cv2.imshow('', img_reselt)
             img_reselt = cv2.vconcat([img_reselt, img_reselt_row])
 
     cv2.imwrite(args.output, img_reselt)
-
-
-
-
-
-
-
 
 
 
